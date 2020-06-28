@@ -4,7 +4,7 @@ extern crate actix_web;
 
 use actix::prelude::*;
 use actix_broker::{Broker, BrokerSubscribe, SystemBroker};
-use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{web, App, Responder, HttpServer};
 
 #[derive(Clone, Debug, Message)]
 #[rtype(result = "()")]
@@ -28,21 +28,18 @@ impl Handler<Hello> for TestActor {
     }
 }
 
-fn index(_req: HttpRequest) -> Result<HttpResponse, Error> {
+async fn index(info: web::Path<(String, u32)>) -> impl Responder {
     Broker::<SystemBroker>::issue_async(Hello);
-    Ok(HttpResponse::Ok()
-        .content_type("text/plain")
-        .body("Welcome!"))
+    format!("Hello {}! id:{}", info.0, info.1)
 }
 
-fn main() {
-    let _ = System::run(|| {
-        TestActor.start();
-
-        HttpServer::new(|| App::new().service(web::resource("/").route(web::get().to(index))))
-            .bind("127.0.0.1:8080")
-            .unwrap()
-            .start();
-        println!("Hit up 127.0.0.1:8080");
-    });
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    TestActor.start();
+    HttpServer::new(|| App::new().service(
+        web::resource("/{name}/{id}/index.html").to(index))
+    )
+        .bind("127.0.0.1:8080")?
+        .run()
+        .await
 }

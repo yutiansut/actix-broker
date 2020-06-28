@@ -10,7 +10,7 @@ use std::mem;
 
 use crate::msgs::*;
 
-type TypeMap<A> = HashMap<TypeId, A, BuildHasherDefault<FnvHasher>>;
+type TypeMap<T> = HashMap<TypeId, T, BuildHasherDefault<FnvHasher>>;
 
 #[derive(Default)]
 pub struct Broker<T> {
