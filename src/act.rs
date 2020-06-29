@@ -1,3 +1,10 @@
+use actix::prelude::*;
+use crate::broker::{Broker, SystemBroker};
+use crate::subscribe::BrokerSubscribe;
+use crate::msgs::BrokerMsg;
+use anymap::AnyMap;
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 pub trait ReplaceableBroker: Unpin + 'static {
     /// Send message asynchronously
@@ -121,7 +128,7 @@ mod tests {
     use test_case::test_case;
 
     #[test_case(1; "Should send 1 message")]
-    #[test_case(4; "Should send 4 messages")]
+    #[test_case(8; "Should send 8 messages")]
     fn test_sending(sent_messages: usize) {
         let spy = Arc::new(Mutex::new(SpyingBroker::new()));
         let spy_clone = spy.clone();
