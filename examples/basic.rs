@@ -1,78 +1,79 @@
 extern crate actix;
 extern crate actix_broker;
-
 use actix::prelude::*;
 use actix_broker::{BrokerIssue, BrokerSubscribe, SystemBroker};
-
-struct ActorOne;
-struct ActorTwo;
-struct ActorThree;
-
+use std::{thread, time};
+struct MOMStrategy1;
+struct SubStrategy1;
+struct SubStrategy2;
 type BrokerType = SystemBroker;
 
-impl Actor for ActorOne {
+impl Actor for MOMStrategy1 {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        self.subscribe_sync::<BrokerType, MessageTwo>(ctx);
-        self.issue_async::<BrokerType, _>(MessageOne("hello".to_string()));
+        self.subscribe_sync::<BrokerType, OrderComplete>(ctx);
+        self.issue_async::<BrokerType, _>(OrderExecutor("send order x".to_string()));
     }
 }
 
-impl Handler<MessageTwo> for ActorOne {
+impl Handler<OrderComplete> for MOMStrategy1 {
     type Result = ();
 
-    fn handle(&mut self, msg: MessageTwo, _ctx: &mut Self::Context) {
-        println!("ActorOne Received: {:?}", msg);
+    fn handle(&mut self, msg: OrderComplete, _ctx: &mut Self::Context) {
+        println!("Strategy1 Received: {:?}", msg);
+
+
+        //self.issue_async::<BrokerType, _>(OrderExecutor("send order y".to_string()));
     }
 }
 
-impl Actor for ActorTwo {
+impl Actor for SubStrategy1 {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        self.subscribe_async::<BrokerType, MessageOne>(ctx);
+        self.subscribe_sync::<BrokerType, OrderExecutor>(ctx);
     }
 }
 
-impl Handler<MessageOne> for ActorTwo {
+impl Handler<OrderExecutor> for SubStrategy1 {
     type Result = ();
 
-    fn handle(&mut self, msg: MessageOne, _ctx: &mut Self::Context) {
-        println!("ActorTwo Received: {:?}", msg);
-        self.issue_async::<BrokerType, _>(MessageTwo(0));
+    fn handle(&mut self, msg: OrderExecutor, _ctx: &mut Self::Context) {
+        println!("Strategy2 Received: {:?}", msg);
+        self.issue_async::<BrokerType, _>(OrderComplete(0));
     }
 }
 
-impl Actor for ActorThree {
+impl Actor for SubStrategy2 {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        self.subscribe_async::<BrokerType, MessageOne>(ctx);
+        self.subscribe_sync::<BrokerType, OrderExecutor>(ctx);
     }
 }
 
-impl Handler<MessageOne> for ActorThree {
+impl Handler<OrderExecutor> for SubStrategy2 {
     type Result = ();
 
-    fn handle(&mut self, msg: MessageOne, _ctx: &mut Self::Context) {
-        println!("ActorThree Received: {:?}", msg);
-        self.issue_async::<BrokerType, _>(MessageTwo(1));
+    fn handle(&mut self, msg: OrderExecutor, _ctx: &mut Self::Context) {
+        println!("Strategy3 Received: {:?}", msg);
+        self.issue_async::<BrokerType, _>(OrderComplete(1));
     }
 }
 
 #[derive(Clone, Debug, Message)]
 #[rtype(result = "()")]
-struct MessageOne(String);
+struct OrderExecutor(String);
 
 #[derive(Clone, Debug, Message)]
 #[rtype(result = "()")]
-struct MessageTwo(u8);
+struct OrderComplete(u8);
 
 fn main() {
     let _ = System::run(|| {
-        ActorTwo.start();
-        ActorThree.start();
-        ActorOne.start();
+        SubStrategy1.start();
+        SubStrategy2.start();
+        MOMStrategy1.start();
     });
 }
